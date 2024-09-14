@@ -65,15 +65,23 @@ if uploaded_file is not None:
 
     # Sidebar for UMAP and K-Means parameters
     st.sidebar.title("Clustering Parameters")
-    n_components = st.sidebar.slider("Number of UMAP Components", min_value=2, max_value=50, value=10)
-    n_clusters = st.sidebar.slider("Number of K-Means Clusters", min_value=2, max_value=10, value=3)
     
-    # Apply UMAP
-    umap_model = umap.UMAP(n_components=n_components, random_state=42)
+    # UMAP parameters
+    n_neighbors = st.sidebar.slider("UMAP n_neighbors", min_value=2, max_value=50, value=15)
+    min_dist = st.sidebar.slider("UMAP min_dist", min_value=0.0, max_value=1.0, value=0.1)
+    n_components = st.sidebar.slider("UMAP n_components", min_value=2, max_value=50, value=10)
+    
+    # K-Means parameters
+    n_clusters = st.sidebar.slider("K-Means Number of Clusters", min_value=2, max_value=10, value=3)
+    kmeans_init = st.sidebar.selectbox("K-Means init method", options=['k-means++', 'random'])
+    max_iter = st.sidebar.slider("K-Means max_iter", min_value=100, max_value=1000, value=300, step=100)
+    
+    # Apply UMAP with user-defined parameters
+    umap_model = umap.UMAP(n_neighbors=n_neighbors, min_dist=min_dist, n_components=n_components, random_state=42)
     umap_transformed_data = umap_model.fit_transform(X_scaled)
 
-    # Apply K-Means
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    # Apply K-Means with user-defined parameters
+    kmeans = KMeans(n_clusters=n_clusters, init=kmeans_init, max_iter=max_iter, random_state=42)
     kmeans_labels = kmeans.fit_predict(umap_transformed_data)
 
     # Calculate metrics
