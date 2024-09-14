@@ -1,6 +1,7 @@
 streamlit
 pandas
-umap-learn
+numpy
 scikit-learn
 matplotlib
-numpy
+umap-learn
+plotly
