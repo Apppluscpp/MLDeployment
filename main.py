@@ -52,6 +52,11 @@ df['Density'] = df['Density'].astype(str).str.replace(',', '').astype(int)
 # Drop columns not useful for clustering
 df.drop(columns=['Latitude', 'Longitude', 'Land Area(Km2)', 'Year'], inplace=True)
 
+# Filtering numerical data
+numeric_data = df.select_dtypes(include='number')
+# Filtering categorical data
+categorical_data = df.select_dtypes(exclude='number')
+
 # Group data by country
 grouped_data = df.groupby('Country').mean()
 
