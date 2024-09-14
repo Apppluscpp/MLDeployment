@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 import umap
-import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
@@ -53,7 +52,7 @@ grouped_data = df.groupby('Country').mean()
 # Scale data
 X_scaled = StandardScaler().fit_transform(grouped_data)
 
-# Set default UMAP and K-Means parameters
+# Set UMAP and K-Means Parameters
 best_n_neighbors = 5
 best_min_dist = 0.0
 n_components = 5
@@ -62,12 +61,12 @@ kmeans_max_iter = 300
 n_clusters = 2
 
 # UMAP Transformation
-st.title('UMAP and K-Means Clustering with Default Parameters')
+st.title('UMAP and K-Means Clustering with Tuned Parameters')
 st.write("UMAP Parameters: n_neighbors = 5, min_dist = 0.0, n_components = 5")
 umap_model = umap.UMAP(n_neighbors=best_n_neighbors, min_dist=best_min_dist, n_components=n_components, random_state=42)
 umap_transformed_data = umap_model.fit_transform(X_scaled)
 
-# Apply K-Means with default parameters
+# Apply K-Means with tuned parameters
 st.write("K-Means Parameters: init = 'k-means++', max_iter = 300, n_clusters = 2")
 kmeans = KMeans(n_clusters=n_clusters, init=kmeans_init, max_iter=kmeans_max_iter, random_state=42)
 kmeans_labels = kmeans.fit_predict(umap_transformed_data)
