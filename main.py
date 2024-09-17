@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import umap
 import numpy as np
-from sklearn.cluster import KMeans, Birch, AgglomerativeClustering
+from sklearn.cluster import KMeans, Birch, AgglomerativeClustering, MeanShift
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
@@ -57,7 +57,7 @@ X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 
 # Algorithm Selection and UMAP Embeddings
 st.header("Step 4: Using Pre-saved UMAP Embeddings")
-algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH', 'Hierarchical'])
+algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH', 'Hierarchical', 'Mean-Shift'])
 
 # Default values for UMAP usage check
 use_predefined_umap = True  # Assume predefined UMAP unless parameters are changed
@@ -100,6 +100,17 @@ elif algorithm_choice == 'Hierarchical':
     elif linkage_method == 'single':
         use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
+# Mean-Shift Clustering Parameters
+elif algorithm_choice == 'Mean-Shift':
+    st.subheader("Mean-Shift Parameters")
+    optimal_bandwidth = st.slider('Bandwidth for Mean-Shift:', 0.1, 5.0, 2.82)
+    
+    # If bandwidth is changed from default value, recompute UMAP
+    if optimal_bandwidth != 2.82:
+        use_predefined_umap = False
+    elif optimal_bandwidth == 2.82:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
+
 # Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
 if use_predefined_umap:
     if algorithm_choice == 'K-Means':
@@ -108,6 +119,8 @@ if use_predefined_umap:
         umap_transformed_data = np.load('umap_embeddings_birch.npy')
     elif algorithm_choice == 'Hierarchical':
         umap_transformed_data = np.load('umap_embeddings_hc.npy')
+    elif algorithm_choice == 'Mean-Shift':
+        umap_transformed_data = np.load('umap_embeddings_ms.npy')
 else:
     st.write("Recomputing UMAP Embeddings due to parameter changes")
     # Recompute UMAP embeddings
@@ -182,3 +195,32 @@ elif algorithm_choice == 'Hierarchical':
     plt.xlabel('UMAP1')
     plt.ylabel('UMAP2')
     st.pyplot(plt)
+
+elif algorithm_choice == 'Mean-Shift':
+    mean_shift = MeanShift(bandwidth=optimal_bandwidth)
+    mean_shift_labels = mean_shift.fit_predict(umap_transformed_data)
+    
+    # Number of clusters found by Mean-Shift
+    n_clusters = len(np.unique(mean_shift_labels))
+    
+    # Evaluation Metrics
+    if n_clusters > 1:  # Ensure there are multiple clusters
+        silhouette_ms = silhouette_score(umap_transformed_data, mean_shift_labels)
+        calinski_harabasz_ms = calinski_harabasz_score(umap_transformed_data, mean_shift_labels)
+        davies_bouldin_ms = davies_bouldin_score(umap_transformed_data, mean_shift_labels)
+
+        st.write(f"Silhouette Score: {silhouette_ms:.2f}")
+        st.write(f"Calinski-Harabasz Index: {calinski_harabasz_ms:.2f}")
+        st.write(f"Davies-Bouldin Index: {davies_bouldin_ms:.2f}")
+        
+        # Plot the clustering results
+        st.subheader("Mean-Shift Cluster Visualization")
+        plt.figure(figsize=(8, 6))
+        plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=mean_shift_labels, cmap='viridis', s=50)
+        plt.title(f"Mean-Shift Clustering with Bandwidth = {optimal_bandwidth}\n"
+                  f"Silhouette Score = {silhouette_ms:.2f}, CH Index = {calinski_harabasz_ms:.2f}, DB Index = {davies_bouldin_ms:.2f}")
+        plt.xlabel('UMAP1')
+        plt.ylabel('UMAP2')
+        st.pyplot(plt)
+    else:
+        st.write("Only one cluster found, no further metrics calculated.")
