@@ -1,6 +1,7 @@
 streamlit
 pandas
-numpy
-matplotlib
-scikit-learn
 umap-learn
+numpy
+scikit-learn
+matplotlib
+fcmeans
