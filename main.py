@@ -5,7 +5,6 @@ import numpy as np
 from sklearn.cluster import KMeans, Birch
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import ParameterGrid
 import matplotlib.pyplot as plt
 
 # Title
@@ -60,7 +59,7 @@ X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 st.header("Step 4: Using Pre-saved UMAP Embeddings")
 algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH'])
 
-# User adjusts parameters
+# Default values for UMAP usage check
 use_predefined_umap = True  # Assume predefined UMAP unless parameters are changed
 
 if algorithm_choice == 'K-Means':
@@ -69,9 +68,11 @@ if algorithm_choice == 'K-Means':
     init_method = st.selectbox('Initialization Method for K-Means:', ['k-means++', 'random'])
     max_iter = st.slider('Max Iterations for K-Means:', 100, 1000, 300)
     
-    # If the user adjusts init_method or max_iter, reject predefined UMAP
+    # If parameters are changed from default values, recompute UMAP
     if init_method != 'k-means++' or max_iter != 300:
         use_predefined_umap = False
+    elif init_method == 'k-means++' and max_iter == 300:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
 elif algorithm_choice == 'BIRCH':
     st.subheader("BIRCH Parameters")
@@ -79,9 +80,11 @@ elif algorithm_choice == 'BIRCH':
     threshold = st.slider('Threshold for BIRCH:', 0.1, 1.0, 0.3)
     branching_factor = st.slider('Branching Factor for BIRCH:', 10, 100, 50)
     
-    # If the user adjusts threshold or branching_factor, reject predefined UMAP
-    if threshold != 0.3 or branching_factor != 50:
+    # If parameters are changed from default values, recompute UMAP
+    if threshold != 0.1 or branching_factor != 20:
         use_predefined_umap = False
+    elif threshold == 0.1 and branching_factor == 20:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
 # Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
 if use_predefined_umap:
