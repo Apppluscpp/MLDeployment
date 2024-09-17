@@ -122,7 +122,6 @@ if use_predefined_umap:
     elif algorithm_choice == 'Mean-Shift':
         umap_transformed_data = np.load('umap_embeddings_ms.npy')
 else:
-    st.write("Recomputing UMAP Embeddings due to parameter changes")
     # Recompute UMAP embeddings
     umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
     umap_transformed_data = umap_model.fit_transform(X_scaled)
