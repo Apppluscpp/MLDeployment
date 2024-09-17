@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.cluster import KMeans, Birch
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
-from fcmeans import FCM
+from sklearn.model_selection import ParameterGrid
 import matplotlib.pyplot as plt
 
 # Title
@@ -56,19 +56,16 @@ numeric_cols = grouped_data.select_dtypes(include=['float64', 'int64']).columns
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 
-# Algorithm Selection
+# Use Pre-saved UMAP embeddings by default
 st.header("Step 4: Using Pre-saved UMAP Embeddings")
-algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH', 'Fuzzy C-Means'])
+algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH'])
 
-# Load UMAP embeddings based on algorithm choice
 if algorithm_choice == 'K-Means':
     umap_transformed_data = np.load('umap_embeddings_km.npy')
-elif algorithm_choice == 'BIRCH':
-    umap_transformed_data = np.load('umap_embeddings_birch.npy')
 else:
-    umap_transformed_data = np.load('umap_embeddings_fcm.npy')
+    umap_transformed_data = np.load('umap_embeddings_birch.npy')
 
-# Parameters for K-Means, BIRCH, and Fuzzy C-Means
+# Parameters for K-Means and BIRCH
 if algorithm_choice == 'K-Means':
     st.subheader("K-Means Parameters")
     n_clusters = st.slider('Number of Clusters for K-Means:', 2, 10, 3)
@@ -124,38 +121,4 @@ elif algorithm_choice == 'BIRCH':
               f"Silhouette Score = {silhouette_avg:.2f}")
     plt.xlabel('UMAP1')
     plt.ylabel('UMAP2')
-    st.pyplot(plt)
-
-elif algorithm_choice == 'Fuzzy C-Means':
-    st.subheader("Fuzzy C-Means Parameters")
-    optimal_num_clusters = st.slider('Number of Clusters for FCM:', 2, 10, 2)
-    fuzziness = st.slider('Fuzziness (m):', 1.1, 3.0, 2.0)
-    max_iter = st.slider('Max Iterations for FCM:', 100, 1000, 300)
-    error = st.slider('Stopping Criterion (Error):', 1e-6, 1e-3, 1e-5, format="%.0e")
-    
-    # Apply Fuzzy C-Means
-    fcm = FCM(n_clusters=optimal_num_clusters, m=fuzziness, max_iter=max_iter, error=error, random_state=42)
-    fcm.fit(umap_transformed_data)
-    fcm_labels = fcm.predict(umap_transformed_data)
-    
-    # Evaluation Metrics
-    silhouette_avg = silhouette_score(umap_transformed_data, fcm_labels)
-    calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, fcm_labels)
-    davies_bouldin_avg = davies_bouldin_score(umap_transformed_data, fcm_labels)
-    
-    st.write(f"Silhouette Score: {silhouette_avg:.2f}")
-    st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
-    st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
-    
-    # Plotting the Clusters for Fuzzy C-Means
-    st.subheader("Fuzzy C-Means Cluster Visualization")
-    plt.figure(figsize=(8, 6))
-    plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=fcm_labels, cmap='viridis', s=50)
-    plt.title(f"Fuzzy C-Means Clustering with {optimal_num_clusters} Clusters\n"
-              f"Silhouette Score = {silhouette_avg:.2f}\n"
-              f"CH Index = {calinski_harabasz_avg:.2f}\n"
-              f"DB Index = {davies_bouldin_avg:.2f}")
-    plt.xlabel('UMAP1')
-    plt.ylabel('UMAP2')
-    plt.grid(True)
     st.pyplot(plt)
