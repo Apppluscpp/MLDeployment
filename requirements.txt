@@ -4,4 +4,3 @@ umap-learn
 numpy
 scikit-learn
 matplotlib
-fcmeans
