@@ -3,7 +3,7 @@ import pandas as pd
 import umap
 import numpy as np
 from sklearn.cluster import KMeans, Birch, AgglomerativeClustering, MeanShift
-from fcmeans import FCM
+import skfuzzy as fuzz
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
@@ -112,7 +112,7 @@ elif algorithm_choice == 'Mean-Shift':
     elif optimal_bandwidth == 2.82:
         use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
-# Fuzzy C-Means Parameters
+# Fuzzy C-Means Parameters using scikit-fuzzy
 elif algorithm_choice == 'Fuzzy C-Means':
     st.subheader("Fuzzy C-Means Parameters")
     error = st.slider('Error Tolerance for Fuzzy C-Means:', 1e-6, 1e-3, 1e-5)
@@ -241,10 +241,19 @@ elif algorithm_choice == 'Mean-Shift':
         st.write("Only one cluster found, no further metrics calculated.")
 
 elif algorithm_choice == 'Fuzzy C-Means':
-    fcm = FCM(n_clusters=optimal_num_clusters, m=m_value, max_iter=max_iter_fcm, error=error, random_state=42)
-    fcm.fit(umap_transformed_data)
-    fcm_labels = fcm.predict(umap_transformed_data)
-    
+    cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+        umap_transformed_data.T,  # Transpose the data
+        c=optimal_num_clusters,    # Number of clusters
+        m=m_value,                 # Fuzziness parameter
+        error=error,               # Error tolerance
+        maxiter=max_iter_fcm,      # Maximum iterations
+        init=None,                 # Random initialization
+        seed=42                    # Random state for reproducibility
+    )
+
+    # Get cluster labels from membership matrix
+    fcm_labels = np.argmax(u, axis=0)
+
     # Evaluation Metrics
     silhouette_avg = silhouette_score(umap_transformed_data, fcm_labels)
     calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, fcm_labels)
