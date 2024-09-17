@@ -54,29 +54,3 @@ grouped_data = df.groupby('Country').mean()
 # Scale data
 X_scaled = StandardScaler().fit_transform(grouped_data)
 
-# UMAP and Clustering
-st.title('UMAP and K-Means Clustering')
-
-n_neighbors = st.slider('n_neighbors', 5, 50, 15)
-min_dist = st.slider('min_dist', 0.0, 1.0, 0.1)
-n_components = st.slider('n_components', 2, 50, 10)
-num_clusters = st.slider('Number of Clusters', 2, 10, 3)
-
-# Apply UMAP
-umap_model = umap.UMAP(n_neighbors=n_neighbors, min_dist=min_dist, n_components=n_components, random_state=42)
-umap_transformed_data = umap_model.fit_transform(X_scaled)
-
-# K-Means Clustering
-kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-kmeans_labels = kmeans.fit_predict(umap_transformed_data)
-
-# Silhouette Score
-silhouette_avg = silhouette_score(umap_transformed_data, kmeans_labels)
-
-st.write(f'Silhouette Score: {silhouette_avg}')
-
-# Plot UMAP
-plt.figure(figsize=(8, 6))
-plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=kmeans_labels, cmap='viridis', s=50)
-plt.title(f'UMAP with {num_clusters} Clusters')
-st.pyplot(plt)
