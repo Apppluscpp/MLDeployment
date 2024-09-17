@@ -4,4 +4,4 @@ umap-learn
 numpy
 scikit-learn
 matplotlib
-fcmeans==0.6.3
+fcmeans
