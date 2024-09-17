@@ -3,6 +3,7 @@ import pandas as pd
 import umap
 import numpy as np
 from sklearn.cluster import KMeans, Birch, AgglomerativeClustering, MeanShift
+from fcmeans import FCM
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
@@ -57,7 +58,7 @@ X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 
 # Algorithm Selection and UMAP Embeddings
 st.header("Step 4: Using Pre-saved UMAP Embeddings")
-algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH', 'Hierarchical', 'Mean-Shift'])
+algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH', 'Hierarchical', 'Mean-Shift', 'Fuzzy C-Means'])
 
 # Default values for UMAP usage check
 use_predefined_umap = True  # Assume predefined UMAP unless parameters are changed
@@ -111,6 +112,19 @@ elif algorithm_choice == 'Mean-Shift':
     elif optimal_bandwidth == 2.82:
         use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
+# Fuzzy C-Means Parameters
+elif algorithm_choice == 'Fuzzy C-Means':
+    st.subheader("Fuzzy C-Means Parameters")
+    error = st.slider('Error Tolerance for Fuzzy C-Means:', 1e-6, 1e-3, 1e-5)
+    m_value = st.slider('Fuzziness Value (m) for Fuzzy C-Means:', 1.0, 3.0, 1.5)
+    max_iter_fcm = st.slider('Max Iterations for Fuzzy C-Means:', 100, 1000, 150)
+
+    # If FCM parameters are changed from default values, recompute UMAP
+    if error != 1e-5 or m_value != 1.5 or max_iter_fcm != 150:
+        use_predefined_umap = False
+    elif error == 1e-5 and m_value == 1.5 and max_iter_fcm == 150:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
+
 # Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
 if use_predefined_umap:
     if algorithm_choice == 'K-Means':
@@ -121,6 +135,8 @@ if use_predefined_umap:
         umap_transformed_data = np.load('umap_embeddings_hc.npy')
     elif algorithm_choice == 'Mean-Shift':
         umap_transformed_data = np.load('umap_embeddings_ms.npy')
+    elif algorithm_choice == 'Fuzzy C-Means':
+        umap_transformed_data = np.load('umap_embeddings_fcm.npy')
 else:
     # Recompute UMAP embeddings
     umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
@@ -223,3 +239,27 @@ elif algorithm_choice == 'Mean-Shift':
         st.pyplot(plt)
     else:
         st.write("Only one cluster found, no further metrics calculated.")
+
+elif algorithm_choice == 'Fuzzy C-Means':
+    fcm = FCM(n_clusters=optimal_num_clusters, m=m_value, max_iter=max_iter_fcm, error=error, random_state=42)
+    fcm.fit(umap_transformed_data)
+    fcm_labels = fcm.predict(umap_transformed_data)
+    
+    # Evaluation Metrics
+    silhouette_avg = silhouette_score(umap_transformed_data, fcm_labels)
+    calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, fcm_labels)
+    davies_bouldin_avg = davies_bouldin_score(umap_transformed_data, fcm_labels)
+    
+    st.write(f"Silhouette Score: {silhouette_avg:.2f}")
+    st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
+    st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
+    
+    # Plotting the Clusters
+    st.subheader("Fuzzy C-Means Cluster Visualization")
+    plt.figure(figsize=(8, 6))
+    plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=fcm_labels, cmap='viridis', s=50)
+    plt.title(f"Fuzzy C-Means Clustering with {optimal_num_clusters} Clusters\n"
+              f"Silhouette Score = {silhouette_avg:.2f}")
+    plt.xlabel('UMAP1')
+    plt.ylabel('UMAP2')
+    st.pyplot(plt)
