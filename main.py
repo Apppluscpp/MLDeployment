@@ -147,16 +147,13 @@ elif algorithm_choice == 'Fuzzy C-Means':
     st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
     st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
     
-    # Plotting the Clusters for Fuzzy C-Means
+    # Plotting the Clusters
     st.subheader("Fuzzy C-Means Cluster Visualization")
     plt.figure(figsize=(8, 6))
     plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=fcm_labels, cmap='viridis', s=50)
     plt.title(f"Fuzzy C-Means Clustering with {optimal_num_clusters} Clusters\n"
-          f"Silhouette Score = {silhouette_avg:.2f}\n"
-          f"CH Index = {calinski_harabasz_avg:.2f}\n"
-          f"DB Index = {davies_bouldin_avg:.2f}")
+              f"Silhouette Score = {silhouette_avg:.2f}")
     plt.xlabel('UMAP1')
     plt.ylabel('UMAP2')
     plt.grid(True)
-    st.pyplot(plt)
-
+    st.pyplot(plt
