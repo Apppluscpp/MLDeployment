@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 # Title
-st.title("Clustering Analysis of Global Sustainable Energy Data")
+st.title("Clustering Analysis of Global Sustainable Energy Data with Pre-saved UMAP Embeddings")
 
 # Load Dataset
 st.header("Step 1: Load Dataset")
@@ -61,19 +61,22 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 st.write("Data Scaled Successfully!")
 
-# UMAP and K-Means Clustering
-st.header("Step 4: UMAP and K-Means Clustering")
+# Load UMAP embeddings if available
+use_saved_embeddings = st.checkbox("Use Pre-saved UMAP Embeddings")
+if use_saved_embeddings:
+    umap_transformed_data = np.load('umap_embeddings_km.npy')
+    st.write("Loaded Pre-saved UMAP Embeddings")
+else:
+    # UMAP parameters
+    st.subheader("UMAP Parameters")
+    n_components = st.slider('Number of UMAP Components:', 2, 50, 10)
+    n_neighbors = st.slider('Number of UMAP Neighbors:', 5, 50, 15)
+    min_dist = st.slider('Minimum Distance for UMAP:', 0.0, 1.0, 0.1)
 
-# UMAP parameters
-st.subheader("UMAP Parameters")
-n_components = st.slider('Number of UMAP Components:', 2, 50, 10)
-n_neighbors = st.slider('Number of UMAP Neighbors:', 5, 50, 15)
-min_dist = st.slider('Minimum Distance for UMAP:', 0.0, 1.0, 0.1)
-
-# Apply UMAP
-umap_model = umap.UMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist, random_state=42)
-umap_transformed_data = umap_model.fit_transform(X_scaled)
-st.write(f"UMAP applied with {n_components} components, {n_neighbors} neighbors, and {min_dist} min distance")
+    # Apply UMAP
+    umap_model = umap.UMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist, random_state=42)
+    umap_transformed_data = umap_model.fit_transform(X_scaled)
+    st.write(f"UMAP applied with {n_components} components, {n_neighbors} neighbors, and {min_dist} min distance")
 
 # K-Means parameters
 st.subheader("K-Means Parameters")
