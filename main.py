@@ -61,17 +61,28 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 st.write("Data Scaled Successfully!")
 
-# Clustering with UMAP and K-Means
-st.header("Step 4: Clustering with UMAP and K-Means")
-n_components = st.slider('Select Number of UMAP Components:', 2, 50, 10)
-n_clusters = st.slider('Select Number of Clusters:', 2, 10, 3)
+# UMAP and K-Means Clustering
+st.header("Step 4: UMAP and K-Means Clustering")
 
-# UMAP Transformation
-umap_model = umap.UMAP(n_components=n_components, random_state=42)
+# UMAP parameters
+st.subheader("UMAP Parameters")
+n_components = st.slider('Number of UMAP Components:', 2, 50, 10)
+n_neighbors = st.slider('Number of UMAP Neighbors:', 5, 50, 15)
+min_dist = st.slider('Minimum Distance for UMAP:', 0.0, 1.0, 0.1)
+
+# Apply UMAP
+umap_model = umap.UMAP(n_components=n_components, n_neighbors=n_neighbors, min_dist=min_dist, random_state=42)
 umap_transformed_data = umap_model.fit_transform(X_scaled)
+st.write(f"UMAP applied with {n_components} components, {n_neighbors} neighbors, and {min_dist} min distance")
 
-# K-Means Clustering
-kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+# K-Means parameters
+st.subheader("K-Means Parameters")
+n_clusters = st.slider('Number of Clusters for K-Means:', 2, 10, 3)
+init_method = st.selectbox('Initialization Method for K-Means:', ['k-means++', 'random'])
+max_iter = st.slider('Max Iterations for K-Means:', 100, 1000, 300)
+
+# Apply K-Means
+kmeans = KMeans(n_clusters=n_clusters, init=init_method, max_iter=max_iter, random_state=42)
 kmeans_labels = kmeans.fit_predict(umap_transformed_data)
 
 # Evaluation Metrics
@@ -91,4 +102,3 @@ plt.title(f"K-Means Clustering with {n_clusters} Clusters")
 plt.xlabel('UMAP1')
 plt.ylabel('UMAP2')
 st.pyplot(plt)
-
