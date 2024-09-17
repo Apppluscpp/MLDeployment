@@ -56,23 +56,48 @@ numeric_cols = grouped_data.select_dtypes(include=['float64', 'int64']).columns
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 
-# Use Pre-saved UMAP embeddings by default
+# Algorithm Selection and UMAP Embeddings
 st.header("Step 4: Using Pre-saved UMAP Embeddings")
 algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH'])
 
-if algorithm_choice == 'K-Means':
-    umap_transformed_data = np.load('umap_embeddings_km.npy')
-else:
-    umap_transformed_data = np.load('umap_embeddings_birch.npy')
+# User adjusts parameters
+use_predefined_umap = True  # Assume predefined UMAP unless parameters are changed
 
-# Parameters for K-Means and BIRCH
 if algorithm_choice == 'K-Means':
     st.subheader("K-Means Parameters")
     n_clusters = st.slider('Number of Clusters for K-Means:', 2, 10, 3)
     init_method = st.selectbox('Initialization Method for K-Means:', ['k-means++', 'random'])
     max_iter = st.slider('Max Iterations for K-Means:', 100, 1000, 300)
     
-    # Apply K-Means
+    # If the user adjusts init_method or max_iter, reject predefined UMAP
+    if init_method != 'k-means++' or max_iter != 300:
+        use_predefined_umap = False
+
+elif algorithm_choice == 'BIRCH':
+    st.subheader("BIRCH Parameters")
+    n_clusters = st.slider('Number of Clusters for BIRCH:', 2, 10, 2)
+    threshold = st.slider('Threshold for BIRCH:', 0.1, 1.0, 0.3)
+    branching_factor = st.slider('Branching Factor for BIRCH:', 10, 100, 50)
+    
+    # If the user adjusts threshold or branching_factor, reject predefined UMAP
+    if threshold != 0.3 or branching_factor != 50:
+        use_predefined_umap = False
+
+# Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
+if use_predefined_umap:
+    st.write("Using Pre-saved UMAP Embeddings")
+    if algorithm_choice == 'K-Means':
+        umap_transformed_data = np.load('umap_embeddings_km.npy')
+    else:
+        umap_transformed_data = np.load('umap_embeddings_birch.npy')
+else:
+    st.write("Recomputing UMAP Embeddings due to parameter changes")
+    # Recompute UMAP embeddings
+    umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
+    umap_transformed_data = umap_model.fit_transform(X_scaled)
+
+# Apply Clustering based on user-selected algorithm
+if algorithm_choice == 'K-Means':
     kmeans = KMeans(n_clusters=n_clusters, init=init_method, max_iter=max_iter, random_state=42)
     kmeans_labels = kmeans.fit_predict(umap_transformed_data)
     
@@ -95,12 +120,6 @@ if algorithm_choice == 'K-Means':
     st.pyplot(plt)
 
 elif algorithm_choice == 'BIRCH':
-    st.subheader("BIRCH Parameters")
-    n_clusters = st.slider('Number of Clusters for BIRCH:', 2, 10, 2)
-    threshold = st.slider('Threshold for BIRCH:', 0.1, 1.0, 0.3)
-    branching_factor = st.slider('Branching Factor for BIRCH:', 10, 100, 50)
-    
-    # Apply BIRCH
     birch = Birch(n_clusters=n_clusters, threshold=threshold, branching_factor=branching_factor)
     birch_labels = birch.fit_predict(umap_transformed_data)
     
