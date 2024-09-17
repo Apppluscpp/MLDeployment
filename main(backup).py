@@ -2,13 +2,13 @@ import streamlit as st
 import pandas as pd
 import umap
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, Birch
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 # Title
-st.title("Clustering Analysis of Global Sustainable Energy Data with Pre-saved UMAP Embeddings")
+st.title("Clustering Analysis with Pre-saved UMAP Embeddings")
 
 # Load Dataset
 file_path = 'global-data-on-sustainable-energy.csv'
@@ -55,33 +55,92 @@ numeric_cols = grouped_data.select_dtypes(include=['float64', 'int64']).columns
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 
-# Use Pre-saved UMAP embeddings by default
-umap_transformed_data = np.load('umap_embeddings_km.npy')
+# Algorithm Selection and UMAP Embeddings
+st.header("Step 4: Using Pre-saved UMAP Embeddings")
+algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH'])
 
-# K-Means parameters
-st.subheader("K-Means Parameters")
-n_clusters = st.slider('Number of Clusters for K-Means:', 2, 10, 3)
-init_method = st.selectbox('Initialization Method for K-Means:', ['k-means++', 'random'])
-max_iter = st.slider('Max Iterations for K-Means:', 100, 1000, 300)
+# Default values for UMAP usage check
+use_predefined_umap = True  # Assume predefined UMAP unless parameters are changed
 
-# Apply K-Means
-kmeans = KMeans(n_clusters=n_clusters, init=init_method, max_iter=max_iter, random_state=42)
-kmeans_labels = kmeans.fit_predict(umap_transformed_data)
+if algorithm_choice == 'K-Means':
+    st.subheader("K-Means Parameters")
+    n_clusters = st.slider('Number of Clusters for K-Means:', 2, 10, 3)
+    init_method = st.selectbox('Initialization Method for K-Means:', ['k-means++', 'random'])
+    max_iter = st.slider('Max Iterations for K-Means:', 100, 1000, 300)
+    
+    # If parameters are changed from default values, recompute UMAP
+    if init_method != 'k-means++' or max_iter != 300:
+        use_predefined_umap = False
+    elif init_method == 'k-means++' and max_iter == 300:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
-# Evaluation Metrics
-silhouette_avg = silhouette_score(umap_transformed_data, kmeans_labels)
-calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, kmeans_labels)
-davies_bouldin_avg = davies_bouldin_score(umap_transformed_data, kmeans_labels)
+elif algorithm_choice == 'BIRCH':
+    st.subheader("BIRCH Parameters")
+    n_clusters = st.slider('Number of Clusters for BIRCH:', 2, 10, 2)
+    threshold = st.slider('Threshold for BIRCH:', 0.1, 1.0, 0.3)
+    branching_factor = st.slider('Branching Factor for BIRCH:', 10, 100, 50)
+    
+    # If parameters are changed from default values, recompute UMAP
+    if threshold != 0.1 or branching_factor != 20:
+        use_predefined_umap = False
+    elif threshold == 0.1 and branching_factor == 20:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
-st.write(f"Silhouette Score: {silhouette_avg:.2f}")
-st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
-st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
+# Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
+if use_predefined_umap:
+    st.write("Using Pre-saved UMAP Embeddings")
+    if algorithm_choice == 'K-Means':
+        umap_transformed_data = np.load('umap_embeddings_km.npy')
+    else:
+        umap_transformed_data = np.load('umap_embeddings_birch.npy')
+else:
+    st.write("Recomputing UMAP Embeddings due to parameter changes")
+    # Recompute UMAP embeddings
+    umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
+    umap_transformed_data = umap_model.fit_transform(X_scaled)
 
-# Plotting the Clusters
-st.subheader("Cluster Visualization")
-plt.figure(figsize=(8, 6))
-plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=kmeans_labels, cmap='viridis', s=50)
-plt.title(f"K-Means Clustering with {n_clusters} Clusters")
-plt.xlabel('UMAP1')
-plt.ylabel('UMAP2')
-st.pyplot(plt)
+# Apply Clustering based on user-selected algorithm
+if algorithm_choice == 'K-Means':
+    kmeans = KMeans(n_clusters=n_clusters, init=init_method, max_iter=max_iter, random_state=42)
+    kmeans_labels = kmeans.fit_predict(umap_transformed_data)
+    
+    # Evaluation Metrics
+    silhouette_avg = silhouette_score(umap_transformed_data, kmeans_labels)
+    calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, kmeans_labels)
+    davies_bouldin_avg = davies_bouldin_score(umap_transformed_data, kmeans_labels)
+    
+    st.write(f"Silhouette Score: {silhouette_avg:.2f}")
+    st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
+    st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
+    
+    # Plotting the Clusters
+    st.subheader("K-Means Cluster Visualization")
+    plt.figure(figsize=(8, 6))
+    plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=kmeans_labels, cmap='viridis', s=50)
+    plt.title(f"K-Means Clustering with {n_clusters} Clusters")
+    plt.xlabel('UMAP1')
+    plt.ylabel('UMAP2')
+    st.pyplot(plt)
+
+elif algorithm_choice == 'BIRCH':
+    birch = Birch(n_clusters=n_clusters, threshold=threshold, branching_factor=branching_factor)
+    birch_labels = birch.fit_predict(umap_transformed_data)
+    
+    # Evaluation Metrics
+    silhouette_avg = silhouette_score(umap_transformed_data, birch_labels)
+    calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, birch_labels)
+    davies_bouldin_avg = davies_bouldin_score(umap_transformed_data, birch_labels)
+    
+    st.write(f"Silhouette Score: {silhouette_avg:.2f}")
+    st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
+    st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
+    
+    # Plotting the Clusters
+    st.subheader("BIRCH Cluster Visualization")
+    plt.figure(figsize=(8, 6))
+    plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=birch_labels, cmap='viridis', s=50)
+    plt.title(f"BIRCH Clustering with Best Parameters\n"
+              f"Silhouette Score = {silhouette_avg:.2f}")
+    plt.xlabel('UMAP1')
+    plt.ylabel('UMAP2')
+    st.pyplot(plt)
