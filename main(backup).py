@@ -88,7 +88,6 @@ elif algorithm_choice == 'BIRCH':
 
 # Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
 if use_predefined_umap:
-    st.write("Using Pre-saved UMAP Embeddings")
     if algorithm_choice == 'K-Means':
         umap_transformed_data = np.load('umap_embeddings_km.npy')
     else:
