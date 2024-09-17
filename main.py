@@ -11,14 +11,10 @@ import matplotlib.pyplot as plt
 st.title("Clustering Analysis of Global Sustainable Energy Data with Pre-saved UMAP Embeddings")
 
 # Load Dataset
-st.header("Step 1: Load Dataset")
 file_path = 'global-data-on-sustainable-energy.csv'
 df = pd.read_csv(file_path)
-st.write("Dataset Loaded Successfully!")
-st.write(df.head())
 
 # Data Pre-processing
-st.header("Step 2: Data Pre-processing")
 df.drop(columns=['Financial flows to developing countries (US $)', 
                  'Renewables (% equivalent primary energy)',
                  'Renewable-electricity-generating-capacity-per-capita'], inplace=True)
@@ -55,16 +51,12 @@ df.drop(columns=['Year', 'Latitude', 'Longitude', 'Land Area(Km2)'], inplace=Tru
 grouped_data = df.groupby('Country').mean()
 
 # Scaling
-st.header("Step 3: Feature Scaling")
 numeric_cols = grouped_data.select_dtypes(include=['float64', 'int64']).columns
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
-st.write("Data Scaled Successfully!")
 
 # Use Pre-saved UMAP embeddings by default
-st.header("Step 4: Using Pre-saved UMAP Embeddings")
 umap_transformed_data = np.load('umap_embeddings_km.npy')
-st.write("Pre-saved UMAP Embeddings Loaded")
 
 # K-Means parameters
 st.subheader("K-Means Parameters")
