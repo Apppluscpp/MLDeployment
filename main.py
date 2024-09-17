@@ -115,6 +115,10 @@ elif algorithm_choice == 'Mean-Shift':
 # Fuzzy C-Means Parameters using scikit-fuzzy
 elif algorithm_choice == 'Fuzzy C-Means':
     st.subheader("Fuzzy C-Means Parameters")
+    
+    # Add slider for number of clusters (just like for other algorithms)
+    optimal_num_clusters = st.slider('Number of Clusters for Fuzzy C-Means:', 2, 10, 2)
+    
     error = st.slider('Error Tolerance for Fuzzy C-Means:', 1e-6, 1e-3, 1e-5)
     m_value = st.slider('Fuzziness Value (m) for Fuzzy C-Means:', 1.0, 3.0, 1.5)
     max_iter_fcm = st.slider('Max Iterations for Fuzzy C-Means:', 100, 1000, 150)
@@ -241,6 +245,7 @@ elif algorithm_choice == 'Mean-Shift':
         st.write("Only one cluster found, no further metrics calculated.")
 
 elif algorithm_choice == 'Fuzzy C-Means':
+    # Apply Fuzzy C-Means using scikit-fuzzy
     cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
         umap_transformed_data.T,  # Transpose the data
         c=optimal_num_clusters,    # Number of clusters
