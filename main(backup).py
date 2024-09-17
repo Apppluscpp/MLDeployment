@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import umap
 import numpy as np
-from sklearn.cluster import KMeans, Birch
+from sklearn.cluster import KMeans, Birch, AgglomerativeClustering, MeanShift
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
@@ -57,11 +57,12 @@ X_scaled = scaler.fit_transform(grouped_data[numeric_cols])
 
 # Algorithm Selection and UMAP Embeddings
 st.header("Step 4: Using Pre-saved UMAP Embeddings")
-algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH'])
+algorithm_choice = st.selectbox("Choose the Clustering Algorithm:", ['K-Means', 'BIRCH', 'Hierarchical', 'Mean-Shift'])
 
 # Default values for UMAP usage check
 use_predefined_umap = True  # Assume predefined UMAP unless parameters are changed
 
+# K-Means Parameters
 if algorithm_choice == 'K-Means':
     st.subheader("K-Means Parameters")
     n_clusters = st.slider('Number of Clusters for K-Means:', 2, 10, 3)
@@ -74,6 +75,7 @@ if algorithm_choice == 'K-Means':
     elif init_method == 'k-means++' and max_iter == 300:
         use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
+# BIRCH Parameters
 elif algorithm_choice == 'BIRCH':
     st.subheader("BIRCH Parameters")
     n_clusters = st.slider('Number of Clusters for BIRCH:', 2, 10, 2)
@@ -86,14 +88,40 @@ elif algorithm_choice == 'BIRCH':
     elif threshold == 0.1 and branching_factor == 20:
         use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
 
+# Hierarchical Clustering Parameters
+elif algorithm_choice == 'Hierarchical':
+    st.subheader("Hierarchical Clustering Parameters")
+    n_clusters = st.slider('Number of Clusters for Hierarchical Clustering:', 2, 10, 2)
+    linkage_method = st.selectbox('Linkage Method for Hierarchical Clustering:', ['single', 'complete', 'average', 'ward'])
+
+    # If parameters are changed from default values, recompute UMAP
+    if linkage_method != 'single':
+        use_predefined_umap = False
+    elif linkage_method == 'single':
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
+
+# Mean-Shift Clustering Parameters
+elif algorithm_choice == 'Mean-Shift':
+    st.subheader("Mean-Shift Parameters")
+    optimal_bandwidth = st.slider('Bandwidth for Mean-Shift:', 0.1, 5.0, 2.82)
+    
+    # If bandwidth is changed from default value, recompute UMAP
+    if optimal_bandwidth != 2.82:
+        use_predefined_umap = False
+    elif optimal_bandwidth == 2.82:
+        use_predefined_umap = True  # Reset back to predefined UMAP if defaults are restored
+
 # Use pre-saved UMAP embeddings only if all parameters except number of clusters are unchanged
 if use_predefined_umap:
     if algorithm_choice == 'K-Means':
         umap_transformed_data = np.load('umap_embeddings_km.npy')
-    else:
+    elif algorithm_choice == 'BIRCH':
         umap_transformed_data = np.load('umap_embeddings_birch.npy')
+    elif algorithm_choice == 'Hierarchical':
+        umap_transformed_data = np.load('umap_embeddings_hc.npy')
+    elif algorithm_choice == 'Mean-Shift':
+        umap_transformed_data = np.load('umap_embeddings_ms.npy')
 else:
-    st.write("Recomputing UMAP Embeddings due to parameter changes")
     # Recompute UMAP embeddings
     umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
     umap_transformed_data = umap_model.fit_transform(X_scaled)
@@ -143,3 +171,55 @@ elif algorithm_choice == 'BIRCH':
     plt.xlabel('UMAP1')
     plt.ylabel('UMAP2')
     st.pyplot(plt)
+
+elif algorithm_choice == 'Hierarchical':
+    hierarchical = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage_method)
+    hierarchical_labels = hierarchical.fit_predict(umap_transformed_data)
+    
+    # Evaluation Metrics
+    silhouette_avg = silhouette_score(umap_transformed_data, hierarchical_labels)
+    calinski_harabasz_avg = calinski_harabasz_score(umap_transformed_data, hierarchical_labels)
+    davies_bouldin_avg = davies_bouldin_score(umap_transformed_data, hierarchical_labels)
+    
+    st.write(f"Silhouette Score: {silhouette_avg:.2f}")
+    st.write(f"Calinski-Harabasz Score: {calinski_harabasz_avg:.2f}")
+    st.write(f"Davies-Bouldin Score: {davies_bouldin_avg:.2f}")
+    
+    # Plotting the Clusters
+    st.subheader("Hierarchical Clustering Visualization")
+    plt.figure(figsize=(8, 6))
+    plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=hierarchical_labels, cmap='viridis', s=50)
+    plt.title(f"Hierarchical Clustering with {n_clusters} Clusters\n"
+              f"Silhouette Score = {silhouette_avg:.2f}")
+    plt.xlabel('UMAP1')
+    plt.ylabel('UMAP2')
+    st.pyplot(plt)
+
+elif algorithm_choice == 'Mean-Shift':
+    mean_shift = MeanShift(bandwidth=optimal_bandwidth)
+    mean_shift_labels = mean_shift.fit_predict(umap_transformed_data)
+    
+    # Number of clusters found by Mean-Shift
+    n_clusters = len(np.unique(mean_shift_labels))
+    
+    # Evaluation Metrics
+    if n_clusters > 1:  # Ensure there are multiple clusters
+        silhouette_ms = silhouette_score(umap_transformed_data, mean_shift_labels)
+        calinski_harabasz_ms = calinski_harabasz_score(umap_transformed_data, mean_shift_labels)
+        davies_bouldin_ms = davies_bouldin_score(umap_transformed_data, mean_shift_labels)
+
+        st.write(f"Silhouette Score: {silhouette_ms:.2f}")
+        st.write(f"Calinski-Harabasz Index: {calinski_harabasz_ms:.2f}")
+        st.write(f"Davies-Bouldin Index: {davies_bouldin_ms:.2f}")
+        
+        # Plot the clustering results
+        st.subheader("Mean-Shift Cluster Visualization")
+        plt.figure(figsize=(8, 6))
+        plt.scatter(umap_transformed_data[:, 0], umap_transformed_data[:, 1], c=mean_shift_labels, cmap='viridis', s=50)
+        plt.title(f"Mean-Shift Clustering with Bandwidth = {optimal_bandwidth}\n"
+                  f"Silhouette Score = {silhouette_ms:.2f}, CH Index = {calinski_harabasz_ms:.2f}, DB Index = {davies_bouldin_ms:.2f}")
+        plt.xlabel('UMAP1')
+        plt.ylabel('UMAP2')
+        st.pyplot(plt)
+    else:
+        st.write("Only one cluster found, no further metrics calculated.")
